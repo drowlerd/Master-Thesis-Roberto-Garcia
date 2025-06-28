@@ -1,0 +1,14 @@
+---
+title: "Documento del Trabajo Fin de Máster"
+author: "Roberto García Martín"
+date: "2025-06-19"
+categories: [Trabajo Fin De Máster]
+image: "PDF_file_icon_margin.png"
+# image-height: 
+description: "Acceda al Pdf del Trabajo de Fin de Master."
+
+---
+
+[Abrir Pdf del Trabajo Fin de Máster.](thesis.pdf){.btn .btn-primary target="_blank"}
+
+

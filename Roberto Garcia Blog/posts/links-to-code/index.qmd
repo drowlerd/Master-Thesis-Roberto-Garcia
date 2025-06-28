@@ -1,0 +1,37 @@
+---
+title: "Enlaces a códigos"
+author: "Roberto García Martín"
+date: "2025-06-19"
+categories: [Trabajo Fin De Máster, Programación]
+table-of-contents: true
+toc-location: left
+image: "image_margin.jpg"
+description: "Enlaces a las carpetas del repositorio con los códigos para los proyectos del máster."
+---
+
+En esta página estarán los enlaces en el repostiorio para acceder a los códigos de cada parte del programa.
+
+![Arquitectura del programa](Arquitectura_experimento.jpg)
+
+## Clases para captar datos desde Unity
+
+Las clases usadas para captar datos de la interacción del usuario con el juego desde Unity y enviarlos a la cola de mensajes en RabbitMQ.
+
+![UML de las clases](uml_unity_rabbitmq.jpg)
+
+[🔗 Ver repositorio en GitHub]()
+
+## Programa de guarado de datos de datos
+
+Los códigos para captar datos, a través de RabbitMQ, procesarlos e insartarlos en la base de datos de PostgreSQL.
+
+![Diagrama del funcionaminto del programa.](diagrama_funcionamiento_programa.jpg)
+
+[🔗 Ver repositorio en GitHub]()
+
+
+## Código fuente del documento Quarto para analizar los datos obtenidos
+
+El documento con el código para generar las métricas y el texo del análisis.
+
+[🔗 Ver repositorio en GitHub]()

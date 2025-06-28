@@ -1,0 +1,829 @@
+---
+title: "Experimento I: Gamegen - Gráficos y análisis de los datos recogidos"
+author: "Roberto García Martín"
+date: "2025-06-19"
+categories: [Trabajo Fin De Máster, Análisis de Datos]
+execute:
+  # cache: true
+#   echo: false
+  warning: false
+  fig-align: center
+format: 
+  html:
+    fig-width: 10
+    fig-height: 5
+    page-layout: full
+    grid:
+      sidebar-width: 300px
+      body-width: 1200px
+      margin-width: 200px
+      gutter-width: 1.5rem
+    table-of-contents: true 
+    toc-location: left
+    cap-location: margin
+    reference-location: margin
+    citation-location: margin
+    csl: vancouver.csl
+    toc: true
+    embed-resources: true
+    code-fold: true
+    # fig-cap-location: bottom
+bibliography: experimento_I_bibliografia.bib
+
+editor: 
+  render-on-save: true
+
+output-dir: renders
+image: "image.png"
+description: "Documento realizado con Quarto y Python para analizar los datos del Evento Gamegen."
+---
+
+
+# Introducción
+***
+Este documento muestra los datos recogidos en el evento presencial "Gamegen 2025"[@DemosGameGenVirtual].
+
+Se mostrará el código para poder ejecutar todo el código y reproducir todos los pasos.
+
+::: {.callout-important}
+La base de datos en la que se ha almacenado los datos y con la que trabaja este documento es **PostgreSQL**[@groupPostgreSQL2025]. Se realizará la conexión y lecturas de los datos mediante el paquete *psycopg2*[@Psycopg2Psycopg2PythonPostgreSQL].
+:::
+
+# Instalar e importar dependencias
+***
+
+Las dependencias utilizadas tanto para realizar las gráficas como para trabajar con el cuaderno son las contenidas en los bloques de código.
+
+```{python}
+#| output: false
+# %pip install pyyaml psycopg2-binary pandas matplotlib seaborn numpy quarto jupyter nbformat ipykernel itables jupyter-cache sklearn
+```
+
+```{python}
+import psycopg2
+import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
+import seaborn as sns
+from itables import show
+from itables import init_notebook_mode
+import numpy as np
+from enum import Enum
+import yaml
+import os
+import math
+# from IPython.display import display, clear_output,HTML
+
+```
+
+
+# Definición de métodos y ajustes del documento
+
+Se han creado métodos propios para trabajar con la base de datos.
+
+
+
+```{python}
+# Clase para ejecutar consulas omitiendo el parametro "conn" ya que se almacena en la memoria del cuaderno.
+def execute_query(query) -> pd.DataFrame:
+    return pd.read_sql(query, conn)
+
+def defaultPalette(alpha=0.4):
+    
+    default_palette = "colorblind"
+    palette = sns.color_palette(default_palette)
+    
+    return [(r, g, b, alpha) for r, g, b in palette]
+
+# Clase pieza
+class Piece(Enum):
+    bcr = 1
+    gun = 2
+    bomb = 3
+    melee = 4
+    pod = 5
+    chip = 6 
+
+def Piece_formater(piece_enum: Piece) -> str:
+    mapping = {
+        Piece.bcr: "Battlecore",
+        Piece.gun: "Pistola",
+        Piece.bomb: "Bomba",
+        Piece.melee: "Cuerpo a cuerpo",
+        Piece.pod: "Vaina",
+        Piece.chip: "Chip",
+    }
+    return mapping.get(piece_enum, piece_enum.name.capitalize())
+
+def get_pieces_win_rate(piece_type,num_players=-1,ax=None) -> pd.DataFrame:
+    pyece_type_name = piece_type.name
+    piece_result_query =f"""
+    SELECT cmm.is_winner_team, p.name
+    FROM versus_robot vr
+    JOIN piece p 
+        ON vr.{pyece_type_name}_piece_id = p.id 
+        AND vr.{pyece_type_name}_piece_version = p.version
+    JOIN combat_mechanics_metrics cmm 
+        ON vr.id = cmm.versus_robot_id
+    """
+    if 2 <= num_players <= 4:
+      piece_result_query+=f"""
+      WHERE vr.match_id IN (
+          SELECT match_id
+          FROM versus_robot
+          GROUP BY match_id
+          HAVING COUNT(*) = {num_players}
+      )
+      """
+
+    pieces_results=execute_query(piece_result_query)
+
+
+    df_counts = pieces_results.groupby(['name', 'is_winner_team']).size().unstack(fill_value=0)
+
+    # Mapear valores booleanos a etiquetas legibles
+    df_counts.columns = df_counts.columns.map({True: 'wins', False: 'losses'})
+
+    df_counts['total']=df_counts['wins']+df_counts['losses']
+
+    df_counts['win_rate']=(df_counts['wins']/df_counts['total'])*100
+
+    # Ordenar nombres de piezas por total de apariciones
+    df_counts=df_counts.sort_values('win_rate', ascending = False)
+
+
+    # Crear un colormap lineal entre los dos colores
+    custom_cmap = mcolors.LinearSegmentedColormap.from_list("custom_gradient", ['red','yellow','lightgreen'])
+
+    # Normalizar los valores de Winrate
+    norm = mcolors.Normalize(vmin=0, vmax=100)
+
+    # Generar una lista de colores desde el colormap según el winrate
+    colors = [custom_cmap(norm(val)) for val in df_counts['win_rate']]
+
+    if ax is None:
+      # Crear gráfico de barras horizontal
+      fig, ax = plt.figure(figsize=(8, 4))
+    sns.barplot(
+        data=df_counts,
+        y='name',
+        x='win_rate',
+        palette=colors,
+        ax=ax
+    )
+
+    for i, val in enumerate(df_counts['win_rate']):
+        ax.text(val + 1, i, f"{val:.2f}%", va='center')
+
+    ax.axvline(50, color='salmon', linestyle='--', label='50%')
+
+                
+    # Etiquetas y título
+    ax.set_xlabel("% Victoria")
+    ax.set_ylabel("Pieza")
+    ax.set_xlim(0,100)
+    ax.set_xticks(range(0,101,10))
+    ax.set_title("% Victoria por pieza de tipo " + Piece_formater(piece_type))
+    if ax is None:
+      plt.tight_layout()
+      plt.show()
+
+    df_counts=df_counts.reset_index()
+    return df_counts[['name', 'win_rate']]
+
+
+def get_pieces_Result(piece_type, num_players=-1, ax=None) -> pd.DataFrame: 
+    piece_type_name = piece_type.name
+    piece_result_query = f"""
+    SELECT cmm.is_winner_team, p.name
+    FROM versus_robot vr
+    JOIN piece p 
+        ON vr.{piece_type_name}_piece_id = p.id 
+        AND vr.{piece_type_name}_piece_version = p.version
+    JOIN combat_mechanics_metrics cmm 
+        ON vr.id = cmm.versus_robot_id
+    """
+    if 2 <= num_players <= 4:
+        piece_result_query += f"""
+        WHERE vr.match_id IN (
+            SELECT match_id
+            FROM versus_robot
+            GROUP BY match_id
+            HAVING COUNT(*) = {num_players}
+        )
+        """
+
+    pieces_results = execute_query(piece_result_query)
+
+    # Agrupar por nombre y resultado (victoria/derrota)
+    df_counts = pieces_results.groupby(['name', 'is_winner_team']).size().unstack(fill_value=0).reset_index()
+
+    # Renombrar columnas para mayor claridad
+    df_counts.columns = ['name', 'losses', 'victories'] if False in df_counts.columns else ['name', 'victories']
+
+    # Si falta alguna columna (ej. si no hay derrotas), comprobar que existan
+    if 'victories' not in df_counts.columns:
+        df_counts['victories'] = 0
+    if 'losses' not in df_counts.columns:
+        df_counts['losses'] = 0
+
+    # Para el gráfico, convertir a formato largo (melt)
+    df_plot = df_counts.melt(id_vars='name', value_vars=['victories', 'losses'], 
+                             var_name='resultado', value_name='count')
+
+    # Ordenar por total de partidas
+    orden_nombres = (
+        df_plot.groupby('name')['count'].sum()
+        .sort_values(ascending=False)
+        .index
+    )
+
+    if ax is None:
+        # Crear gráfico
+        fig = plt.figure(figsize=(8, 4))
+        ax = sns.barplot(
+            data=df_plot,
+            y='name',
+            x='count',
+            hue='resultado',
+            order=orden_nombres,
+            palette={'victories': 'lightgreen', 'losses': 'salmon'},
+        )
+    else:
+        sns.barplot(
+            data=df_plot,
+            y='name',
+            x='count',
+            hue='resultado',
+            order=orden_nombres,
+            palette={'victories': 'lightgreen', 'losses': 'salmon'},
+            ax=ax
+        )
+
+    # Etiquetas y título
+    ax.set_xlabel("Cantidad de Partidas")
+    ax.set_ylabel("Pieza")
+    ax.set_title("Victorias y Derrotas por pieza de tipo " + Piece_formater(piece_type))
+    handles, labels = ax.get_legend_handles_labels()
+    ax.legend(handles, ['Victorias', 'Derrotas'], title="Resultado", loc="lower right")
+
+    if ax is None:
+        plt.tight_layout()
+        plt.show()
+
+    total_games= df_counts['victories'].sum() +df_counts['losses'].sum() 
+    
+    df_counts['total_relative'] = (df_counts['victories'] + df_counts['losses'])  / total_games
+
+    return df_counts[['name', 'victories', 'losses','total_relative']]
+
+
+def get_pieces_accuracy(piece_type: Piece):
+  targetName= 'bcr_overdrive' if piece_type==Piece.bcr else  piece_type.name
+  piece_result_query ="""
+  SELECT cmm.is_winner_team , p.name,cmm.[P1]_times_used,cmm.[P1]_times_hit
+  FROM versus_robot vr
+  JOIN piece p 
+      ON vr.[P]_piece_id = p.id 
+      AND vr.[P]_piece_version = p.version
+  JOIN combat_mechanics_metrics cmm 
+      ON vr.id = cmm.versus_robot_id;
+  """.replace("[P]",piece_type.name).replace("[P1]",targetName)
+    
+
+  pieces_results=execute_query(piece_result_query)
+
+
+  df_accuracy = pd.DataFrame(pieces_results, columns=['is_winner_team', 'name', f'{targetName}_times_used', f'{targetName}_times_hit'])
+
+  # Calcular la accuracy por instancia (evitando división por cero)
+  df_accuracy['accuracy'] = df_accuracy.apply(
+      lambda row: row[f'{targetName}_times_hit'] / row[f'{targetName}_times_used']
+      if row[f'{targetName}_times_used'] > 0 else None,
+      axis=1
+  )
+
+  # Eliminar filas con accuracy nula
+  df_accuracy = df_accuracy.dropna(subset=['accuracy'])
+
+  # Crear boxplot de distribución de accuracy por pieza
+  plt.figure(figsize=(10, 5))
+  sns.boxplot(data=df_accuracy, x='accuracy',y='name', palette='colorblind',showfliers=False)
+
+  plt.ylabel('Pieza')
+  plt.xlabel('Precisión (hits / usos)')
+  plt.title(f'Distribución de precisión para piezas de tipo {Piece_formater(piece_type)}')
+  plt.xticks(rotation=45)
+  plt.grid(axis='y', linestyle='--', alpha=0.5)
+
+  plt.tight_layout()
+  plt.show()
+  return df_accuracy
+```
+
+```{python}
+#Ajustes de paleta y gráficas de seaborn.
+sns.set_palette("colorblind")
+sns.set_theme(rc={
+    "axes.titlesize": 13,
+    "axes.labelsize": 14,
+    "xtick.labelsize": 12,
+    "ytick.labelsize": 12,
+    "legend.fontsize": 12,
+    "font.size": 12
+})
+sns.set_style("ticks")
+```
+
+```{python}
+# Ajuste para mostrar tablas interactivas
+init_notebook_mode(connected=False)
+```
+
+
+# Conexion a la base de datos
+
+La información para conectarse a la base de datos está almacenada en un archivo YAML[@OfficialYAMLWeb], por lo que en caso de querer replicar el documento, habrá que crear un archivo en la misma carpeta donde esté el archivo *.qmd*.
+
+Una vez realizada la conexión, se puede proceder a mostrar las gráficas.
+
+
+```{python}
+    
+with open("F:\_A Master\Documento_TFM\TFM-Roberto-Garcia\Proyectos_analisis_datos\Experimento_I_Gamegen\secrets.yml", "r") as f:
+    secrets_file = yaml.safe_load(f)["experiment_I"]
+    
+# Conexión a PostgreSQL obteniendo datos del archivo YAML
+conn = psycopg2.connect(
+    dbname=secrets_file["DB_NAME"],
+    user=secrets_file["DB_USER"],
+    password=secrets_file["DB_PASSWORD"],
+    host=secrets_file["DB_HOST"], 
+    port=secrets_file["DB_PORT"]
+)
+
+```
+
+# Cantidad de datos recogidos
+***
+Los datos obtenidos en total son los siguientes:
+```{python}
+data_count_query="""
+SELECT
+  (SELECT COUNT(*) FROM public.match_set) AS total_match_sets,
+  (SELECT COUNT(*) FROM public.match) AS total_matches,
+  (SELECT COUNT(*) FROM public.versus_robot) AS total_robots;
+"""
+data_count_df = execute_query(data_count_query)
+
+show(data_count_df)
+```
+
+Mediante el "total_match_sets" se pued eestimar que un total de 150 grupos de personas o menos jugador partidas.
+
+# Tiempo de partidas
+***
+```{python}
+#| fig-align: center
+#| label: fig-match-duration
+#| fig-cap: Duración de las partidas
+#| fig-cap-location: bottom
+duration_minutes_label = "duration_minutes"
+duration_seconds_label = "duration_seconds"
+
+# Consulta SQL para obtener los tiempos en segundos
+match_duration_query = "SELECT id, arena_id, match_set_id, EXTRACT(EPOCH FROM duration)/60 AS " + duration_minutes_label +", EXTRACT(EPOCH FROM duration) AS "+ duration_seconds_label + " FROM match;"
+
+df = execute_query(match_duration_query)
+
+f, axs = plt.subplots(1,2,figsize=(8,4), gridspec_kw=dict(width_ratios=[4, 3]))
+
+# plt.figure(figsize=(10, 5))
+sns.histplot(df[duration_minutes_label], bins=30, kde=True, color=defaultPalette()[0], ax=axs[0],palette="colorblind")
+
+axs[0].set_xlabel("Minutos")
+axs[0].set_ylabel("Frecuencia")
+axs[0].set_title("Distribución")
+
+axs[1].set_xlabel("Minutos")
+axs[1].set_title("Análisis descriptivo")
+
+sns.boxplot(x=df[duration_minutes_label],showmeans=True, ax=axs[1],color=defaultPalette()[0],fill=False)
+
+sns.stripplot(x=df[duration_minutes_label], dodge=True, ax=axs[1], edgecolor = "black",alpha=.25)
+axs[1].set_xlabel("Minutos")
+
+
+f.suptitle("Duración de combates")
+
+plt.tight_layout()
+plt.show()
+
+
+```
+
+Las partidas han durado **entre 30 segundos y 4 minutos y medio**. Lo típico parece ser que duren entre 1 minuto y 2. La media en casi 2 minutos y la moda en minuto y medio.
+
+También es interesante plantear cuanto han durado las partidas entre separado por el nº de jugadores.
+
+```{python}
+#| fig-align: center
+#| label: fig-match-duration-by-player
+#| fig-cap: Duración de las partidas por número de jugadores
+#| fig-cap-location: bottom
+match_duration_by_players_query = """
+SELECT
+  m.id AS match_id,
+  EXTRACT(EPOCH FROM m.duration) / 60 AS duration_minutes,
+  COUNT(vr.id) AS num_players
+FROM
+  public.match m
+LEFT JOIN
+  versus_robot vr ON m.id = vr.match_id
+WHERE
+  m.duration != INTERVAL '0 seconds'
+GROUP BY
+  m.id, m.duration
+ORDER BY
+  m.id;
+"""
+
+match_duration_by_players_df = execute_query(match_duration_by_players_query)
+
+
+match_duration_by_players_fig, match_duration_by_players_fig_axs = plt.subplots(1,2,figsize=(8,4))
+
+sns.kdeplot(x=duration_minutes_label, data=match_duration_by_players_df,hue="num_players", palette="colorblind", fill=False,ax=match_duration_by_players_fig_axs[0])
+
+sns.boxplot(data=match_duration_by_players_df, x=duration_minutes_label,hue="num_players", palette='colorblind',ax=match_duration_by_players_fig_axs[1])
+
+
+match_duration_by_players_fig_axs[1].legend(title = "Nº Jugadores")
+
+match_duration_by_players_fig_axs[0].set_xlabel('Minutos')
+match_duration_by_players_fig_axs[0].set_ylabel('Densidad')
+match_duration_by_players_fig_axs[0].set_title("Distribución")
+
+match_duration_by_players_fig_axs[1].set_xlim(0,6)
+match_duration_by_players_fig_axs[1].set_xlabel('Minutos')
+match_duration_by_players_fig_axs[1].set_title("Análisis descriptivo")
+
+match_duration_by_players_fig.suptitle("Duración de combates por nº de jugadores")
+
+plt.tight_layout()
+plt.show()
+```
+
+Viendo los gráficos, podemos afirmar que las partidas de más jugadores tienden a duerar algo más, en concreto las partidas de 3 jugadores han durado más.
+
+## Conclusiones
+
+Se ha podido desarrollar unas gráficas sobre el tiempo de partidas, con las que se puede tener una idea de cuanto puede durar un combate con dos conclusiones principales:
+
+* Las partidas suelen durar entre 1 y 2 minutos.
+* La moda está en 1 minuto y medio, un tiempo bueno para generar partidas rápidas y frenéticas.
+
+
+Estas gráficas pueden ayudarnos a decidir como tratar los combates  y evaluar si es necesario controlar variables de las piezas para que las partidas duren más o menos.
+
+# Uso de piezas y victorias/derrotas con cada una
+***
+
+El siguiente paso es estudiar las piezas. Esta sección es de las más importnates, puesto que va a decidir qué piezas se pondrán en la primera versión del juego para los jugadores de Patreon.
+
+Para ello, se ha partido de un gráfico de barras agrupadas por pieza. El gráfico se va a orenar por el total de veces que se ha usado la pieza.
+
+Además, en ese mismo gráfico se enseñaran en vez de una barra con el conteo de las partidas las victorias y derrotas por pieza. 
+
+::: {.callout-note}
+Una partida que gana muchas veces puede ser mejor elección que una pieza muy usada ya que puede ser más satisfactoria a la hora de jugar.
+:::
+
+Mediante las gráficas e haciendo inferencia en el equipo de por qué las piezas han tenido dichosresultados, **se conseguirá un sistema de decisión  sobre qué piezas incluir en el Patreon.**
+
+Para poder generar dicho sistema, se emplearán 2 gráficas:
+
+1. La gráfica de partidas ganadas y perdidas por pieza teniendo en cuenta todas las partidas.
+2. Una gráfica del % de victorias con esa pieza (en videojuegos el término es "win rate %") **para partidas de 2 jugadores**.
+
+El último punto es debido a que la mayoría del juego que jugarán los jugadores son combates 1 contra 1 dentro de los diferentes modos de juego, por lo que se estudiará en partidas de 2 jugadores cuanto porcentaje de victorias tiene una pieza, y se contrastará con la otra gráfica.
+
+Al ser un juego de lucha, se espera que la mayoría de piezas de una categoría tengan una tasa ronden cerca del 50%. Se hará una gráfica mostrando el error cuadrático medio de las tasa de victorias de las piezas, comprobando así cual se aleja más del 50%. 
+
+::: {.callout-important}
+Se puede presuponer que un tipo de pieza con mayor error cuadrático medio es más significativa para determinar el resultado de una partida.
+:::
+
+
+```{python}
+pieces_win_rate={}
+pieces_results={}
+```
+
+## Uso de _Battlecores_
+```{python}
+#| label: fig-bcr-piece-usage
+#| fig-cap: Partidas y tasa de victoria de _Battlecores_
+#| fig-cap-location: bottom
+fig, axs = plt.subplots(1,2,figsize=(12,4))
+
+fig.subplots_adjust(wspace=.5)
+
+pieces_results[Piece.bcr] = get_pieces_Result(Piece.bcr,2,ax=axs[0])
+
+bcr_win_rates = get_pieces_win_rate(Piece.bcr,2,ax=axs[1])
+
+pieces_win_rate[Piece.bcr] = bcr_win_rates
+```
+
+En los robots, podemos tener un ejemplo claro de que incluir con "Taiga Oscuro", es un robot que se escoge bastante y con el que se ha ganado más veces. 
+
+En el videojuego, *__Dart__* es el Battlecore que se escogió para el tutorial. En la gráfica podemos ver como Es un robot no con mucha tasa de victoria. De esta manera, al empezar con un robot "peor" y luego conseguir otros el jugador podrá sentir progreso.
+
+Además, de la gráfica podemos obtener que habría que revisar varios robots, como Khepri o Missy, con los que el porcentaje de victorias se aleja bastante del 50% deseado.
+
+Se busca incluir un robot de cada clase, por lo que hay que elegir entre *Khepri* y *Rhino*, y entre *Dart* y *Sharky*. Se eligió a *Rhino*, por su habilidad especial y porque, observando la gráfica, parece ser menos frustrante que jugar con "Khepri". Por otro lado, se eligió a *Dart* en vez de a *Sharky* ya que este último se ha usado más veces y tiene más acabado visual, por lo que se archivó el robot para una futura versión, en la que lo destacado sea este robot.
+
+Finalmente, los robots escogidos han sido: *Dart* (pieza inicial), *Taiga*, *Taiga Oscuro*, *Rhino*, *V-man*, *Harleking*, *Fénix* y *Missy*.
+
+
+## Uso de Pistolas (_Guns_)
+```{python}
+#| label: fig-gun-piece-usage
+#| fig-cap: Partidas y tasa de victoria de Pistolas (_Guns_)
+#| fig-cap-location: bottom
+fig, axs = plt.subplots(1,2,figsize=(12,4))
+
+fig.subplots_adjust(wspace=.5)
+
+pieces_results[Piece.gun] =get_pieces_Result(Piece.gun,2,ax=axs[0])
+
+guns_win_rate = get_pieces_win_rate(Piece.gun,2,ax=axs[1])
+
+pieces_win_rate[Piece.gun] = guns_win_rate
+```
+
+Respecto a las pistolas, un ejemplo muy claro de incluir fue la *Escudo-G*. Parece ser que ha sido una pieza muy seleccionada (probablemente por su estilo visual) pero es la pieza con la que menos partidas se ha ganado.
+
+Un aspecto positivo de las pistolas es que todas están entorno al 50% de tasa de victorias deseado.
+
+Para la versión de Patreon, había que elegir seis piezas. Finalmente se descartaron *Pistola Horizontal* y *Metratesla*. La razón es su baja selección pero su alta tasa de victoria, serían
+piezas que podían hacer el juego aburrido porque son mucho mejores respecto las otras
+piezas. La razón por la que se eligió inlcuir *Llama Dragón* en vez de descartarla a pesar de
+ser una pieza poderosa es porque fue la pieza más seleccionada por los usuarios, probablemente debido a su estilo visual.
+
+1. *Llama Dragón*.
+2. *Escudo-G*.
+3. *Pistolamor*.
+4. *Sniper*.
+5. *Espiral Ilegal*.
+6. *Blaster (pieza inicial)*.
+
+## Uso de Bombas (_Bombs_)
+
+```{python}
+#| label: fig-bomb-piece-usage
+#| fig-cap: Partidas y tasa de victoria de Bombas (_Bombs_)
+#| fig-cap-location: bottom
+fig, axs = plt.subplots(1,2,figsize=(12,4))
+
+fig.subplots_adjust(wspace=.5)
+
+pieces_results[Piece.bomb] = get_pieces_Result(Piece.bomb,2,ax=axs[0])
+
+bombs_win_rate = get_pieces_win_rate(Piece.bomb,2,ax=axs[1])
+
+pieces_win_rate[Piece.bomb] = bombs_win_rate
+
+```
+
+En el caso de las bombas, se van a incluir seis, por lo que hay que descartar una.
+
+Se decidió descartar *Terrormoto*, ya que era la que menos uso ha tenido y la que se aleja
+más 5% después de *Impacto Ácido*, que es la pieza inicial. Así pues, se incluyeron:
+
+1. *Misil Nuclear*.
+2. *Brilli-Brilli*.
+3. *Lanza de Luz*.
+4. *Impacto Ácido (pieza inicial)*.
+5. *Aturdecruz*.
+6. *Lluvia Kárpica*.
+
+## Uso de Cuerpo a cuerpo (_Melee_)
+
+```{python}
+#| label: fig-melee-piece-usage
+#| fig-cap: Partidas y tasa de victoria de piezas Cuerpo a cuerpo (_Melee_)
+#| fig-cap-location: bottom
+fig, axs = plt.subplots(1,2,figsize=(12,4))
+
+fig.subplots_adjust(wspace=.5)
+
+pieces_results[Piece.melee] = get_pieces_Result(Piece.melee,2,ax=axs[0])
+
+melees_win_rate = get_pieces_win_rate(Piece.melee,2,ax=axs[1])
+
+pieces_win_rate[Piece.melee] = melees_win_rate
+
+```
+
+Para las melee se busca descartar una pieza. La pieza a descartar parece el *Hacha cornuda*. No es la pieza que menos veces se ha
+usado, pero es la segunda con menos tasa de victoria seguida de la pieza inical. Esto puede
+deberse a que es más difícil de usar en comparación con las otras piezas.
+
+Como resultado, en la primera versión de Patreon se ha incluido:
+
+1. *B0nk (pieza inicial)*.
+2. *Agarre del Vacío*.
+3. *Garras Relámpago*.
+4. *Dragón Naciente*.
+
+
+## Uso de Vainas (_Pods_)
+
+```{python}
+#| label: fig-pods-piece-usage
+#| fig-cap: Partidas y tasa de victoria de Vainas (_Pods_)
+#| fig-cap-location: bottom
+fig, axs = plt.subplots(1,2,figsize=(12,4))
+
+fig.subplots_adjust(wspace=.5)
+
+pieces_results[Piece.pod] = get_pieces_Result(Piece.pod,2,ax=axs[0])
+
+pods_win_rate = get_pieces_win_rate(Piece.pod,2,ax=axs[1])
+
+pieces_win_rate[Piece.pod] = pods_win_rate
+
+```
+
+Esta figura muestra que esta categoría presenta **la mayor variación en tasa de victoria**. Destaca *Acechador*, con la tasa más alta pero solo 4ª en uso, lo que indica un posible desequilibrio identificado gracias al sistema de decisión.
+
+También se observan piezas que no han ganado muchas partidas, como *Mina Aérea* y *Mina Aérea Ilegal*, que deberán ser revisadas.
+
+__Se utilizó la desproporción de la tasa de victorias como oportunidad__, generando piezas claramente superiores. Esta será una excepción, ya que en el futuro se buscará un equilibrio cercano al 50%.
+
+De tal manera, observando la gráfica lo correcto parece ser excluir Torpedo y Mina de
+Tierra, ya que son las dos piezas con resultados más cercanos al 50%.
+
+Las seis piezas tipo Vaina de la primera versión fueron:
+
+1. *Ping Pong (pieza inicial)*.
+2. *Libélula*.
+3. *Acechador*.
+4. *Trampa Eléctrica*.
+5. *Mina Aérea*.
+6. *Mina Aérea Ilegal*.
+
+## Uso de Chips 
+
+```{python}
+#| label: fig-chips-piece-usage
+#| fig-cap: Partidas y tasa de victoria de piezas Chips
+#| fig-cap-location: bottom
+fig, axs = plt.subplots(1,2,figsize=(12,4))
+
+fig.subplots_adjust(wspace=.5)
+
+pieces_results[Piece.chip] = get_pieces_Result(Piece.chip,2,ax=axs[0])
+
+chips_win_rate = get_pieces_win_rate(Piece.chip,2,ax=axs[1])
+
+pieces_win_rate[Piece.chip] = chips_win_rate
+
+```
+
+Se van a añadir todos los chips a la primera versión. Sin embargo gracias a las gráficas podemos ver como los chips se acercan mucho al 50% de tasa de victoria esperado. El menos escogido ha sido cazador.
+
+## Diferencia de la tasa de victoria respecto al 50%
+
+Una manera de evaluar como de determinante ha sido una pieza es midiendo cuanto se aleja del 50% utilizando la raíz cuadráda del error medio cuadrático.
+
+Observando la gráfica, podemos evaluar que la categoría de piezas que más se desvían son los Battlecores (los robots), seguido del caso del pods.
+
+```{python}
+#| label: fig-pieces-win-rate-RMSE
+#| fig-cap: Error medio cuadrático de las tasas de victoria de los diferentes tipos de piezas respecto el 50%.
+#| fig-cap-location: bottom
+data = []
+for piece_type_enum, df in pieces_win_rate.items():
+    if 'win_rate' not in df.columns:
+        continue
+    rmse = np.sqrt(np.mean((df['win_rate'] - 50) ** 2))
+    data.append({'Tipo': Piece_formater(piece_type_enum), 'RMSE': rmse})
+
+# Crear DataFrame ordenado
+df_rmse = pd.DataFrame(data).sort_values('RMSE', ascending=False)
+
+# Crear gráfico
+plt.figure(figsize=(8, 4))
+ax = sns.barplot(
+    data=df_rmse,
+    y='Tipo',
+    x='RMSE',
+    palette='colorblind'
+)
+
+ax.set_title("Desviación (RMSE) de la tasa de victoria respecto al 50%")
+ax.set_xlabel("Error Medio Cuadrático")
+ax.set_ylabel("Tipo de pieza")
+ax.set_xlim(0,max(df_rmse['RMSE'])+2)
+# Añadir texto con valores
+for i, val in enumerate(df_rmse['RMSE']):
+    ax.text(val + 0.2, i, f"{val:.2f}%", va='center')
+
+plt.tight_layout()
+plt.show()
+
+```
+
+
+# Mecánicas
+
+Es interesante analizar que mecánicas se han utilizado más. De esta manera, podemos detectar que mecánicas se han pasado por alto y así decidir si hay que enfatizar alguna mecánica en los tutoriales del juego.
+
+Para mostrarlo, se va a autilizar un diagrama de violín.
+```{python}
+#| fig-align: center
+#| label: fig-mechanics-usage
+#| fig-cap: Uso de las mécanicas.
+#| fig-cap-location: bottom
+def mechanics_times_used_query():
+    
+    query = """
+    SELECT 
+        block_times_used AS "Escudo",
+        parry_count AS "Desvío",
+        bcr_overdrive_times_used AS "Habilidad especial",
+        gun_times_used AS "Pistola",
+        melee_times_used AS "Cuerpo a cuerpo",
+        bomb_times_used AS "Bomb",
+        pod_times_used AS "Vaina"
+    FROM combat_mechanics_metrics;
+    """
+    return query
+
+mechanics = execute_query(mechanics_times_used_query())
+
+plt.figure(figsize=(8, 4))
+sns.violinplot(mechanics)
+plt.title('Uso de mecánicas')
+plt.xticks(rotation=45)
+plt.show()
+```
+
+Al haber tanta diferencia entre cuanto se usa una mecánica respecto a otra (por ejemplo, en una partida lo normal es que pueda usar la mecánica de overdrive entre 1 y 2 veces), se va a mostrar los datos pasados por la función logarítmo para reducir la dispersión y poder leer mejor la información.
+
+```{python}
+#| fig-align: center
+#| label: fig-mechanics-usage-log
+#| fig-cap: Uso de las mécanicas con reducción de dispersión.
+#| fig-cap-location: bottom
+mechanics_log = np.log(mechanics)
+plt.figure(figsize=(8, 4))
+sns.violinplot(mechanics_log)
+plt.title('Uso de mecánicas')
+plt.xticks(rotation=45)
+plt.show()
+```
+
+Con esta gráfica resulta más facil entender los datos. Poniendo la atención en averiguar que mecánicas se usan menos, se puede observar que la acción "Parry" pasa muy desapercibido, estando la mediana muy cerca a 0. Por lo que podemos obtener la información que hay que enfatizar es mecánica a la hora de explicar el juego, para que sea más usada. 
+
+También parece que las habilidades de robots se han utilizado muy poco. En este caso puede ser interesante mostrar solo el violin de dicha mecánica, sin aplicar la reducción de dispersión.
+
+```{python}
+#| fig-align: center
+#| label: fig-mechanics-overdrive-usage
+#| fig-cap: "Uso de la mecánica _Overdrive_ , la habilidad especial de los robots."
+#| fig-cap-location: bottom
+
+plt.figure(figsize=(6, 4))
+sns.violinplot(mechanics["Habilidad especial"])
+plt.title('Uso de la mecánica "Overdrive"')
+plt.ylabel("Nº de veces usado")
+
+plt.show()
+```
+
+La mediana está en 1, lo que significa quela mitad de partidas llega a usarse al menos una vez la habilidad especial. Sin embargo, tanta anchura es 0 respecto en 1 es preocupante, por lo que se tendrá que plantear algún cambio para que la habilidad especial tenga más uso.
+
+# Conclusiones y decisiones obtenidas
+
+Gracias a este análisis se ha podido comprender el estado del arte sobre las decisiones de los jugadores a la hora de interactuar con el juego, desde las piezas hasta tratar cuanto dura una partida. 
+
+
+Con todas las gráficas de arriba, se pueden obtener los siguientes sistermas de decisión:
+
+- Un sistema para ayudar a decidir las piezas incluidas el primer mes de Patreon.
+- Un sistema para evaluar el uso de las mecánicas, lo cual permite ayudar a las decisiones de diseño de juego para enfatizar mecánicas.
+- Un sistema para evaluar como de determinante es una categoría de piezas para  ganar o perder una partida.
+- Un sistema para evaluar si las partidas tiene una duración deseada. La duración de las partidas puede definir la druación del juego.
+
+Se explicará más en detalle el papel de dichos sistemas de decisión en la memoria.
+
+Por último, se cierra la conexión con la base de datos.
+
+```{python}
+# Cerrar conexión
+conn.close()
+```
