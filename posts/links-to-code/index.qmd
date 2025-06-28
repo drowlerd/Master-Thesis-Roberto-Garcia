@@ -19,19 +19,19 @@ Las clases usadas para captar datos de la interacción del usuario con el juego 
 
 ![UML de las clases](uml_unity_rabbitmq.jpg)
 
-[🔗 Ver repositorio en GitHub]()
+[🔗 Ver código en GitHub](https://github.com/drowlerd/Master-Thesis-Roberto-Garcia/tree/main/code/Consumer_Program)
 
-## Programa de guarado de datos de datos
+## Programa de guarado de datos en la base de datos
 
 Los códigos para captar datos, a través de RabbitMQ, procesarlos e insartarlos en la base de datos de PostgreSQL.
 
 ![Diagrama del funcionaminto del programa.](diagrama_funcionamiento_programa.jpg)
 
-[🔗 Ver repositorio en GitHub]()
+[🔗 Ver código en GitHub](https://github.com/drowlerd/Master-Thesis-Roberto-Garcia/tree/main/code/Sender_Scripts)
 
 
 ## Código fuente del documento Quarto para analizar los datos obtenidos
 
 El documento con el código para generar las métricas y el texo del análisis.
 
-[🔗 Ver repositorio en GitHub]()
+[🔗 Ver código en GitHub](https://github.com/drowlerd/Master-Thesis-Roberto-Garcia/blob/main/posts/data-doc-gamegen/index.qmd)

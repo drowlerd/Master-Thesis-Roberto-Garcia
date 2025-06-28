@@ -1,0 +1,114 @@
+[
+  {
+    "objectID": "posts/thesis/index.html",
+    "href": "posts/thesis/index.html",
+    "title": "Documento del Trabajo Fin de Máster",
+    "section": "",
+    "text": "Abrir Pdf del Trabajo Fin de Máster."
+  },
+  {
+    "objectID": "posts/data-doc-gamegen/index.html",
+    "href": "posts/data-doc-gamegen/index.html",
+    "title": "Experimento I: Gamegen - Gráficos y análisis de los datos recogidos",
+    "section": "",
+    "text": "Este documento muestra los datos recogidos en el evento presencial “Gamegen 2025”[1].\n\n1. Demos GameGen X | Virtual Soul [Internet]. [cited 2025 Feb 14]. Available from: https://virtualsoul.es/gamegenX/gx-demos.html\nSe mostrará el código para poder ejecutar todo el código y reproducir todos los pasos.\n\n\n\n\n\n\nImportant\n\n\n\nLa base de datos en la que se ha almacenado los datos y con la que trabaja este documento es PostgreSQL[2]. Se realizará la conexión y lecturas de los datos mediante el paquete psycopg2[3].\n\n\n\n3. Psycopg2: Psycopg2 - Python-PostgreSQL Database Adapter [Internet]. [cited 2025 May 13]. Available from: https://psycopg.org/\n\n2. Group PGD. PostgreSQL [Internet]. PostgreSQL; 2025 [cited 2025 Feb 14]. Available from: https://www.postgresql.org/"
+  },
+  {
+    "objectID": "posts/data-doc-gamegen/index.html#conclusiones",
+    "href": "posts/data-doc-gamegen/index.html#conclusiones",
+    "title": "Experimento I: Gamegen - Gráficos y análisis de los datos recogidos",
+    "section": "Conclusiones",
+    "text": "Conclusiones\nSe ha podido desarrollar unas gráficas sobre el tiempo de partidas, con las que se puede tener una idea de cuanto puede durar un combate con dos conclusiones principales:\n\nLas partidas suelen durar entre 1 y 2 minutos.\nLa moda está en 1 minuto y medio, un tiempo bueno para generar partidas rápidas y frenéticas.\n\nEstas gráficas pueden ayudarnos a decidir como tratar los combates y evaluar si es necesario controlar variables de las piezas para que las partidas duren más o menos."
+  },
+  {
+    "objectID": "posts/data-doc-gamegen/index.html#uso-de-battlecores",
+    "href": "posts/data-doc-gamegen/index.html#uso-de-battlecores",
+    "title": "Experimento I: Gamegen - Gráficos y análisis de los datos recogidos",
+    "section": "Uso de Battlecores",
+    "text": "Uso de Battlecores\n\n\nCode\nfig, axs = plt.subplots(1,2,figsize=(12,4))\n\nfig.subplots_adjust(wspace=.5)\n\npieces_results[Piece.bcr] = get_pieces_Result(Piece.bcr,2,ax=axs[0])\n\nbcr_win_rates = get_pieces_win_rate(Piece.bcr,2,ax=axs[1])\n\npieces_win_rate[Piece.bcr] = bcr_win_rates\n\n\n\n\n\n\n\n\nFigure 3: Partidas y tasa de victoria de Battlecores\n\n\n\n\n\nEn los robots, podemos tener un ejemplo claro de que incluir con “Taiga Oscuro”, es un robot que se escoge bastante y con el que se ha ganado más veces.\nEn el videojuego, Dart es el Battlecore que se escogió para el tutorial. En la gráfica podemos ver como Es un robot no con mucha tasa de victoria. De esta manera, al empezar con un robot “peor” y luego conseguir otros el jugador podrá sentir progreso.\nAdemás, de la gráfica podemos obtener que habría que revisar varios robots, como Khepri o Missy, con los que el porcentaje de victorias se aleja bastante del 50% deseado.\nSe busca incluir un robot de cada clase, por lo que hay que elegir entre Khepri y Rhino, y entre Dart y Sharky. Se eligió a Rhino, por su habilidad especial y porque, observando la gráfica, parece ser menos frustrante que jugar con “Khepri”. Por otro lado, se eligió a Dart en vez de a Sharky ya que este último se ha usado más veces y tiene más acabado visual, por lo que se archivó el robot para una futura versión, en la que lo destacado sea este robot.\nFinalmente, los robots escogidos han sido: Dart (pieza inicial), Taiga, Taiga Oscuro, Rhino, V-man, Harleking, Fénix y Missy."
+  },
+  {
+    "objectID": "posts/data-doc-gamegen/index.html#uso-de-pistolas-guns",
+    "href": "posts/data-doc-gamegen/index.html#uso-de-pistolas-guns",
+    "title": "Experimento I: Gamegen - Gráficos y análisis de los datos recogidos",
+    "section": "Uso de Pistolas (Guns)",
+    "text": "Uso de Pistolas (Guns)\n\n\nCode\nfig, axs = plt.subplots(1,2,figsize=(12,4))\n\nfig.subplots_adjust(wspace=.5)\n\npieces_results[Piece.gun] =get_pieces_Result(Piece.gun,2,ax=axs[0])\n\nguns_win_rate = get_pieces_win_rate(Piece.gun,2,ax=axs[1])\n\npieces_win_rate[Piece.gun] = guns_win_rate\n\n\n\n\n\n\n\n\nFigure 4: Partidas y tasa de victoria de Pistolas (Guns)\n\n\n\n\n\nRespecto a las pistolas, un ejemplo muy claro de incluir fue la Escudo-G. Parece ser que ha sido una pieza muy seleccionada (probablemente por su estilo visual) pero es la pieza con la que menos partidas se ha ganado.\nUn aspecto positivo de las pistolas es que todas están entorno al 50% de tasa de victorias deseado.\nPara la versión de Patreon, había que elegir seis piezas. Finalmente se descartaron Pistola Horizontal y Metratesla. La razón es su baja selección pero su alta tasa de victoria, serían piezas que podían hacer el juego aburrido porque son mucho mejores respecto las otras piezas. La razón por la que se eligió inlcuir Llama Dragón en vez de descartarla a pesar de ser una pieza poderosa es porque fue la pieza más seleccionada por los usuarios, probablemente debido a su estilo visual.\n\nLlama Dragón.\nEscudo-G.\nPistolamor.\nSniper.\nEspiral Ilegal.\nBlaster (pieza inicial)."
+  },
+  {
+    "objectID": "posts/data-doc-gamegen/index.html#uso-de-bombas-bombs",
+    "href": "posts/data-doc-gamegen/index.html#uso-de-bombas-bombs",
+    "title": "Experimento I: Gamegen - Gráficos y análisis de los datos recogidos",
+    "section": "Uso de Bombas (Bombs)",
+    "text": "Uso de Bombas (Bombs)\n\n\nCode\nfig, axs = plt.subplots(1,2,figsize=(12,4))\n\nfig.subplots_adjust(wspace=.5)\n\npieces_results[Piece.bomb] = get_pieces_Result(Piece.bomb,2,ax=axs[0])\n\nbombs_win_rate = get_pieces_win_rate(Piece.bomb,2,ax=axs[1])\n\npieces_win_rate[Piece.bomb] = bombs_win_rate\n\n\n\n\n\n\n\n\nFigure 5: Partidas y tasa de victoria de Bombas (Bombs)\n\n\n\n\n\nEn el caso de las bombas, se van a incluir seis, por lo que hay que descartar una.\nSe decidió descartar Terrormoto, ya que era la que menos uso ha tenido y la que se aleja más 5% después de Impacto Ácido, que es la pieza inicial. Así pues, se incluyeron:\n\nMisil Nuclear.\nBrilli-Brilli.\nLanza de Luz.\nImpacto Ácido (pieza inicial).\nAturdecruz.\nLluvia Kárpica."
+  },
+  {
+    "objectID": "posts/data-doc-gamegen/index.html#uso-de-cuerpo-a-cuerpo-melee",
+    "href": "posts/data-doc-gamegen/index.html#uso-de-cuerpo-a-cuerpo-melee",
+    "title": "Experimento I: Gamegen - Gráficos y análisis de los datos recogidos",
+    "section": "Uso de Cuerpo a cuerpo (Melee)",
+    "text": "Uso de Cuerpo a cuerpo (Melee)\n\n\nCode\nfig, axs = plt.subplots(1,2,figsize=(12,4))\n\nfig.subplots_adjust(wspace=.5)\n\npieces_results[Piece.melee] = get_pieces_Result(Piece.melee,2,ax=axs[0])\n\nmelees_win_rate = get_pieces_win_rate(Piece.melee,2,ax=axs[1])\n\npieces_win_rate[Piece.melee] = melees_win_rate\n\n\n\n\n\n\n\n\nFigure 6: Partidas y tasa de victoria de piezas Cuerpo a cuerpo (Melee)\n\n\n\n\n\nPara las melee se busca descartar una pieza. La pieza a descartar parece el Hacha cornuda. No es la pieza que menos veces se ha usado, pero es la segunda con menos tasa de victoria seguida de la pieza inical. Esto puede deberse a que es más difícil de usar en comparación con las otras piezas.\nComo resultado, en la primera versión de Patreon se ha incluido:\n\nB0nk (pieza inicial).\nAgarre del Vacío.\nGarras Relámpago.\nDragón Naciente."
+  },
+  {
+    "objectID": "posts/data-doc-gamegen/index.html#uso-de-vainas-pods",
+    "href": "posts/data-doc-gamegen/index.html#uso-de-vainas-pods",
+    "title": "Experimento I: Gamegen - Gráficos y análisis de los datos recogidos",
+    "section": "Uso de Vainas (Pods)",
+    "text": "Uso de Vainas (Pods)\n\n\nCode\nfig, axs = plt.subplots(1,2,figsize=(12,4))\n\nfig.subplots_adjust(wspace=.5)\n\npieces_results[Piece.pod] = get_pieces_Result(Piece.pod,2,ax=axs[0])\n\npods_win_rate = get_pieces_win_rate(Piece.pod,2,ax=axs[1])\n\npieces_win_rate[Piece.pod] = pods_win_rate\n\n\n\n\n\n\n\n\nFigure 7: Partidas y tasa de victoria de Vainas (Pods)\n\n\n\n\n\nEsta figura muestra que esta categoría presenta la mayor variación en tasa de victoria. Destaca Acechador, con la tasa más alta pero solo 4ª en uso, lo que indica un posible desequilibrio identificado gracias al sistema de decisión.\nTambién se observan piezas que no han ganado muchas partidas, como Mina Aérea y Mina Aérea Ilegal, que deberán ser revisadas.\nSe utilizó la desproporción de la tasa de victorias como oportunidad, generando piezas claramente superiores. Esta será una excepción, ya que en el futuro se buscará un equilibrio cercano al 50%.\nDe tal manera, observando la gráfica lo correcto parece ser excluir Torpedo y Mina de Tierra, ya que son las dos piezas con resultados más cercanos al 50%.\nLas seis piezas tipo Vaina de la primera versión fueron:\n\nPing Pong (pieza inicial).\nLibélula.\nAcechador.\nTrampa Eléctrica.\nMina Aérea.\nMina Aérea Ilegal."
+  },
+  {
+    "objectID": "posts/data-doc-gamegen/index.html#uso-de-chips",
+    "href": "posts/data-doc-gamegen/index.html#uso-de-chips",
+    "title": "Experimento I: Gamegen - Gráficos y análisis de los datos recogidos",
+    "section": "Uso de Chips",
+    "text": "Uso de Chips\n\n\nCode\nfig, axs = plt.subplots(1,2,figsize=(12,4))\n\nfig.subplots_adjust(wspace=.5)\n\npieces_results[Piece.chip] = get_pieces_Result(Piece.chip,2,ax=axs[0])\n\nchips_win_rate = get_pieces_win_rate(Piece.chip,2,ax=axs[1])\n\npieces_win_rate[Piece.chip] = chips_win_rate\n\n\n\n\n\n\n\n\nFigure 8: Partidas y tasa de victoria de piezas Chips\n\n\n\n\n\nSe van a añadir todos los chips a la primera versión. Sin embargo gracias a las gráficas podemos ver como los chips se acercan mucho al 50% de tasa de victoria esperado. El menos escogido ha sido cazador."
+  },
+  {
+    "objectID": "posts/data-doc-gamegen/index.html#diferencia-de-la-tasa-de-victoria-respecto-al-50",
+    "href": "posts/data-doc-gamegen/index.html#diferencia-de-la-tasa-de-victoria-respecto-al-50",
+    "title": "Experimento I: Gamegen - Gráficos y análisis de los datos recogidos",
+    "section": "Diferencia de la tasa de victoria respecto al 50%",
+    "text": "Diferencia de la tasa de victoria respecto al 50%\nUna manera de evaluar como de determinante ha sido una pieza es midiendo cuanto se aleja del 50% utilizando la raíz cuadráda del error medio cuadrático.\nObservando la gráfica, podemos evaluar que la categoría de piezas que más se desvían son los Battlecores (los robots), seguido del caso del pods.\n\n\nCode\ndata = []\nfor piece_type_enum, df in pieces_win_rate.items():\n    if 'win_rate' not in df.columns:\n        continue\n    rmse = np.sqrt(np.mean((df['win_rate'] - 50) ** 2))\n    data.append({'Tipo': Piece_formater(piece_type_enum), 'RMSE': rmse})\n\n# Crear DataFrame ordenado\ndf_rmse = pd.DataFrame(data).sort_values('RMSE', ascending=False)\n\n# Crear gráfico\nplt.figure(figsize=(8, 4))\nax = sns.barplot(\n    data=df_rmse,\n    y='Tipo',\n    x='RMSE',\n    palette='colorblind'\n)\n\nax.set_title(\"Desviación (RMSE) de la tasa de victoria respecto al 50%\")\nax.set_xlabel(\"Error Medio Cuadrático\")\nax.set_ylabel(\"Tipo de pieza\")\nax.set_xlim(0,max(df_rmse['RMSE'])+2)\n# Añadir texto con valores\nfor i, val in enumerate(df_rmse['RMSE']):\n    ax.text(val + 0.2, i, f\"{val:.2f}%\", va='center')\n\nplt.tight_layout()\nplt.show()\n\n\n\n\n\n\n\n\nFigure 9: Error medio cuadrático de las tasas de victoria de los diferentes tipos de piezas respecto el 50%."
+  },
+  {
+    "objectID": "about.html",
+    "href": "about.html",
+    "title": "About",
+    "section": "",
+    "text": "About this blog"
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "Roberto García Martín - Trabajo Fin de Máster",
+    "section": "",
+    "text": "Experimento I: Gamegen - Gráficos y análisis de los datos recogidos\n\n\n\n\n\n\nTrabajo Fin De Máster\n\n\nAnálisis de Datos\n\n\n\nDocumento realizado con Quarto y Python para analizar los datos del Evento Gamegen.\n\n\n\n\n\nJun 19, 2025\n\n\nRoberto García Martín\n\n\n\n\n\n\n\n\n\n\n\n\nEnlaces a códigos\n\n\n\n\n\n\nTrabajo Fin De Máster\n\n\nProgramación\n\n\n\nEnlaces a las carpetas del repositorio con los códigos para los proyectos del máster.\n\n\n\n\n\nJun 19, 2025\n\n\nRoberto García Martín\n\n\n\n\n\n\n\n\n\n\n\n\nDocumento del Trabajo Fin de Máster\n\n\n\n\n\n\nTrabajo Fin De Máster\n\n\n\nAcceda al Pdf del Trabajo de Fin de Master.\n\n\n\n\n\nJun 19, 2025\n\n\nRoberto García Martín\n\n\n\n\n\n\nNo matching items"
+  },
+  {
+    "objectID": "posts/links-to-code/index.html",
+    "href": "posts/links-to-code/index.html",
+    "title": "Enlaces a códigos",
+    "section": "",
+    "text": "En esta página estarán los enlaces en el repostiorio para acceder a los códigos de cada parte del programa."
+  },
+  {
+    "objectID": "posts/links-to-code/index.html#clases-para-captar-datos-desde-unity",
+    "href": "posts/links-to-code/index.html#clases-para-captar-datos-desde-unity",
+    "title": "Enlaces a códigos",
+    "section": "Clases para captar datos desde Unity",
+    "text": "Clases para captar datos desde Unity\nLas clases usadas para captar datos de la interacción del usuario con el juego desde Unity y enviarlos a la cola de mensajes en RabbitMQ.\n\n\n\nUML de las clases\n\n\n🔗 Ver código en GitHub"
+  },
+  {
+    "objectID": "posts/links-to-code/index.html#programa-de-guarado-de-datos-en-la-base-de-datos",
+    "href": "posts/links-to-code/index.html#programa-de-guarado-de-datos-en-la-base-de-datos",
+    "title": "Enlaces a códigos",
+    "section": "Programa de guarado de datos en la base de datos",
+    "text": "Programa de guarado de datos en la base de datos\nLos códigos para captar datos, a través de RabbitMQ, procesarlos e insartarlos en la base de datos de PostgreSQL.\n\n\n\nDiagrama del funcionaminto del programa.\n\n\n🔗 Ver código en GitHub"
+  },
+  {
+    "objectID": "posts/links-to-code/index.html#código-fuente-del-documento-quarto-para-analizar-los-datos-obtenidos",
+    "href": "posts/links-to-code/index.html#código-fuente-del-documento-quarto-para-analizar-los-datos-obtenidos",
+    "title": "Enlaces a códigos",
+    "section": "Código fuente del documento Quarto para analizar los datos obtenidos",
+    "text": "Código fuente del documento Quarto para analizar los datos obtenidos\nEl documento con el código para generar las métricas y el texo del análisis.\n🔗 Ver código en GitHub"
+  }
+]
